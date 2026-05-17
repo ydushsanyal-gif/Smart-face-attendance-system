@@ -1,0 +1,25 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Clone') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t face-attendance-backend ./backend'
+            }
+        }
+
+        stage('Run Container') {
+            steps {
+                sh 'docker stop face-attendance-backend || true'
+                sh 'docker rm face-attendance-backend || true'
+                sh 'docker run -d --name face-attendance-backend --env-file backend/.env -p 5000:5000 face-attendance-backend'
+            }
+        }
+    }
+}
