@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FaceAttend — Smart Attendance System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #111118;
+      --card: #16161f;
+      --border: #2a2a3a;
+      --accent: #00e5a0;
+      --accent2: #7c3aed;
+      --accent3: #f59e0b;
+      --text: #e8e8f0;
+      --muted: #6b6b80;
+      --danger: #ef4444;
+      --mono: 'Space Mono', monospace;
+      --sans: 'Syne', sans-serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* GRID BACKGROUND */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      position: fixed;
+      left: 0; top: 0; bottom: 0;
+      width: 240px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+      padding: 24px 0;
+    }
+
+    .logo {
+      padding: 0 24px 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+
+    .logo-mark {
+      width: 40px; height: 40px;
+      background: var(--accent);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 10px;
+    }
+
+    .logo-mark svg { width: 22px; height: 22px; }
+
+    .logo-text {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .logo-sub {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 24px;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+      border-left: 3px solid transparent;
+    }
+
+    .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+    .nav-item.active {
+      color: var(--accent);
+      border-left-color: var(--accent);
+      background: rgba(0,229,160,0.05);
+    }
+
+    .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin-right: 6px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%,100% { opacity:1; }
+      50% { opacity:0.3; }
+    }
+
+    /* MAIN */
+    .main {
+      margin-left: 240px;
+      padding: 32px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* HEADER */
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 32px;
+    }
+
+    .page-title { font-size: 28px; font-weight: 800; letter-spacing: -1px; }
+    .page-sub { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+    /* STAT CARDS */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::after {
+      content: '';
+      position: absolute;
+      top: 0; right: 0;
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      opacity: 0.08;
+      transform: translate(20px,-20px);
+    }
+
+    .stat-card.green::after { background: var(--accent); }
+    .stat-card.purple::after { background: var(--accent2); }
+    .stat-card.amber::after { background: var(--accent3); }
+    .stat-card.red::after { background: var(--danger); }
+
+    .stat-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 12px;
+    }
+
+    .stat-value {
+      font-size: 36px;
+      font-weight: 800;
+      letter-spacing: -2px;
+      line-height: 1;
+    }
+
+    .stat-card.green .stat-value { color: var(--accent); }
+    .stat-card.purple .stat-value { color: #a78bfa; }
+    .stat-card.amber .stat-value { color: var(--accent3); }
+    .stat-card.red .stat-value { color: var(--danger); }
+
+    .stat-meta {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    /* TABLE */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .card-title { font-size: 14px; font-weight: 700; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th {
+      font-family: var(--mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      padding: 12px 24px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 14px 24px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      color: var(--text);
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .badge.present { background: rgba(0,229,160,0.12); color: var(--accent); }
+    .badge.unknown { background: rgba(239,68,68,0.12); color: var(--danger); }
+    .badge.already { background: rgba(245,158,11,0.12); color: var(--accent3); }
+
+    /* BUTTONS */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+    }
+    .btn-primary:hover { background: #00c88c; transform: translateY(-1px); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { color: var(--text); border-color: var(--accent); }
+
+    .btn-danger {
+      background: rgba(239,68,68,0.1);
+      color: var(--danger);
+      border: 1px solid rgba(239,68,68,0.2);
+    }
+
+    /* FORM */
+    .form-group { margin-bottom: 20px; }
+    label {
+      display: block;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    input[type="text"], input[type="email"], input[type="tel"], input[type="date"] {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus { border-color: var(--accent); }
+
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+    .upload-zone:hover { border-color: var(--accent); background: rgba(0,229,160,0.02); }
+    .upload-zone input { position: absolute; inset:0; opacity:0; cursor:pointer; }
+    .upload-icon { font-size: 32px; margin-bottom: 12px; }
+    .upload-text { font-size: 13px; color: var(--muted); }
+
+    /* CAMERA VIEW */
+    .camera-wrapper {
+      position: relative;
+      background: #000;
+      border-radius: 16px;
+      overflow: hidden;
+      aspect-ratio: 16/9;
+      border: 1px solid var(--border);
+    }
+
+    #cameraFeed {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    #cameraFeed.mirrored {
+      transform: scaleX(-1);
+      transform-origin: center;
+    }
+
+    .camera-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .camera-guide {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .camera-guide-text {
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(9, 15, 28, 0.72);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #fff;
+      font-size: 12px;
+      letter-spacing: 0.02em;
+      text-align: center;
+      backdrop-filter: blur(6px);
+    }
+
+    .face-box {
+      width: 200px; height: 200px;
+      border: 2px solid var(--accent);
+      border-radius: 12px;
+      position: relative;
+      animation: scan 2s ease-in-out infinite;
+    }
+
+    @keyframes scan {
+      0%,100% { box-shadow: 0 0 0 0 rgba(0,229,160,0.4); }
+      50% { box-shadow: 0 0 30px 5px rgba(0,229,160,0.1); }
+    }
+
+    .face-box::before, .face-box::after {
+      content: '';
+      position: absolute;
+      width: 20px; height: 20px;
+      border-color: var(--accent);
+      border-style: solid;
+    }
+
+    .face-box::before { top: -2px; left: -2px; border-width: 3px 0 0 3px; border-radius: 6px 0 0 0; }
+    .face-box::after { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; border-radius: 0 0 6px 0; }
+
+    .scan-line {
+      position: absolute;
+      left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      animation: scanline 2s linear infinite;
+    }
+
+    @keyframes scanline {
+      0% { top: 0; opacity:1; }
+      100% { top: 100%; opacity:0; }
+    }
+
+    /* TOAST */
+    .toast-container {
+      position: fixed;
+      top: 20px; right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 999;
+    }
+
+    .toast {
+      padding: 14px 20px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      border-left: 4px solid;
+      background: var(--card);
+      animation: slideIn 0.3s ease;
+      max-width: 300px;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(100px); opacity:0; }
+      to { transform: translateX(0); opacity:1; }
+    }
+
+    .toast.success { border-color: var(--accent); color: var(--accent); }
+    .toast.error { border-color: var(--danger); color: var(--danger); }
+    .toast.info { border-color: var(--accent3); color: var(--accent3); }
+
+    /* TWO COL LAYOUT */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+
+    .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.4; }
+    .empty-text { font-size: 14px; }
+
+    .confidence-bar {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      width: 80px;
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 8px;
+    }
+
+    .confidence-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      transition: width 0.5s ease;
+    }
+
+    .filter-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .section-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+
+    .unknown-face-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .unknown-face-card img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      background: var(--card);
+    }
+
+    .unknown-face-meta {
+      padding: 12px;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .avatar {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      background: var(--accent2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .user-cell { display: flex; align-items: center; gap: 12px; }
+  </style>
+</head>
+<body>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5">
+        <circle cx="12" cy="8" r="4"/>
+        <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+        <path d="M16 3.5c1.5.5 2.5 2 2.5 3.5"/>
+        <path d="M19 20h2"/>
+      </svg>
+    </div>
+    <div class="logo-text">FaceAttend</div>
+    <div class="logo-sub">Smart Attendance System</div>
+  </div>
+
+  <nav>
+    <div class="nav-item active" onclick="showPage('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item" onclick="showPage('attendance')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      Attendance Log
+    </div>
+    <div class="nav-item" onclick="showPage('register')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><path d="M20 8v6m-3-3h6"/></svg>
+      Register User
+    </div>
+    <div class="nav-item" onclick="showPage('users')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+      All Users
+    </div>
+    <div class="nav-item" onclick="showPage('unknown')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+      Unknown Faces
+    </div>
+    <div class="nav-item" onclick="showPage('camera')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+      Live Camera
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div><span class="status-dot"></span>API Connected</div>
+    <div style="margin-top:4px">v1.0 &bull; AWS Rekognition</div>
+  </div>
+</aside>
+
+<!-- MAIN CONTENT -->
+<main class="main">
+
+  <!-- DASHBOARD PAGE -->
+  <div class="page active" id="page-dashboard">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Overview</div>
+        <div class="page-sub">REAL-TIME ATTENDANCE MONITORING</div>
+      </div>
+      <button class="btn btn-primary" onclick="refreshDashboard()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+        Refresh
+      </button>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card green">
+        <div class="stat-label">Present Today</div>
+        <div class="stat-value" id="stat-present">—</div>
+        <div class="stat-meta">Marked as present</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-label">Total Users</div>
+        <div class="stat-value" id="stat-users">—</div>
+        <div class="stat-meta">Registered faces</div>
+      </div>
+      <div class="stat-card amber">
+        <div class="stat-label">Avg Confidence</div>
+        <div class="stat-value" id="stat-confidence">—</div>
+        <div class="stat-meta">Rekognition match score</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-label">Unknown Faces</div>
+        <div class="stat-value" id="stat-unknown">—</div>
+        <div class="stat-meta">Unrecognized captures</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Today's Attendance</div>
+        <button class="btn btn-ghost" onclick="exportCSV()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          Export CSV
+        </button>
+      </div>
+      <div id="dashboardTable">
+        <div class="empty-state"><div class="loading-spinner"></div><div class="empty-text" style="margin-top:12px">Loading...</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ATTENDANCE LOG PAGE -->
+  <div class="page" id="page-attendance">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Attendance Log</div>
+        <div class="page-sub">FULL HISTORY WITH FILTERS</div>
+      </div>
+      <div class="filter-row">
+        <input type="date" id="filterDate" onchange="loadAttendance()" />
+        <button class="btn btn-ghost" onclick="clearFilter()">Clear Filter</button>
+        <button class="btn btn-primary" onclick="exportCSV()">Export CSV</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div id="attendanceTable">
+        <div class="empty-state"><div class="loading-spinner"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REGISTER PAGE -->
+  <div class="page" id="page-register">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Register User</div>
+        <div class="page-sub">ADD FACE TO REKOGNITION COLLECTION</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card" style="padding:28px">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="reg-name" placeholder="e.g. Arjun Sharma" />
+        </div>
+        <div class="form-group">
+          <label>Roll / Employee Number</label>
+          <input type="text" id="reg-roll" placeholder="e.g. CS2024001" />
+        </div>
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" id="reg-email" placeholder="arjun@college.edu" />
+        </div>
+        <div class="form-group">
+          <label>Phone (with country code)</label>
+          <input type="tel" id="reg-phone" placeholder="+919876543210" />
+        </div>
+        <div class="form-group">
+          <label>Face Photo</label>
+          <div class="upload-zone" id="uploadZone">
+            <input type="file" id="reg-image" accept="image/*" onchange="previewImage(this)" />
+            <div class="upload-icon">📸</div>
+            <div class="upload-text">Click to upload or drag a face photo<br><span style="opacity:0.5;font-size:11px">JPG, PNG — clear face, good lighting</span></div>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="regBtn" onclick="registerUser()" style="width:100%;justify-content:center;padding:14px">
+          Register User
+        </button>
+      </div>
+
+      <div class="card" style="padding:28px;display:flex;flex-direction:column;gap:16px">
+        <div class="card-title">Preview</div>
+        <div id="imagePreview" style="flex:1;display:flex;align-items:center;justify-content:center;background:var(--surface);border-radius:12px;min-height:280px">
+          <div style="text-align:center;color:var(--muted)">
+            <div style="font-size:48px;opacity:0.3">🖼️</div>
+            <div style="font-size:12px;margin-top:8px">Image preview will appear here</div>
+          </div>
+        </div>
+        <div style="background:var(--surface);border-radius:10px;padding:16px">
+          <div style="font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Tips for best results</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.8">
+            ✓ &nbsp;Face clearly visible &amp; centered<br>
+            ✓ &nbsp;Good lighting, no shadows<br>
+            ✓ &nbsp;No sunglasses or mask<br>
+            ✓ &nbsp;Neutral expression<br>
+            ✓ &nbsp;Min 300×300px resolution
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- USERS PAGE -->
+  <div class="page" id="page-users">
+    <div class="page-header">
+      <div>
+        <div class="page-title">All Users</div>
+        <div class="page-sub">REGISTERED FACE DATABASE</div>
+      </div>
+      <button class="btn btn-primary" onclick="showPage('register')">+ Register New User</button>
+    </div>
+    <div class="card">
+      <div id="usersTable">
+        <div class="empty-state"><div class="loading-spinner"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- UNKNOWN FACES PAGE -->
+  <div class="page" id="page-unknown">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Unknown Faces</div>
+        <div class="page-sub">UNRECOGNIZED CAPTURES STORED IN S3</div>
+      </div>
+    </div>
+    <div id="unknownGrid">
+      <div class="empty-state"><div class="loading-spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- CAMERA PAGE -->
+  <div class="page" id="page-camera">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Live Camera</div>
+        <div class="page-sub">BROWSER-BASED FACE CAPTURE &amp; ATTENDANCE</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div>
+        <div class="camera-wrapper" id="cameraWrapper">
+          <video id="cameraFeed" autoplay muted playsinline></video>
+          <canvas id="cameraCanvas" style="display:none"></canvas>
+          <div class="camera-overlay" id="cameraOverlay">
+            <div style="text-align:center;color:var(--muted)">
+              <div style="font-size:32px;margin-bottom:8px">📷</div>
+              <div style="font-size:12px">Click Start Camera to begin</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;margin-top:16px">
+          <button class="btn btn-primary" id="startCamBtn" onclick="startCamera()" style="flex:1;justify-content:center">Start Camera</button>
+          <button class="btn btn-ghost" id="capturBtn" onclick="captureAndMark()" disabled style="flex:1;justify-content:center">Verify &amp; Mark Attendance</button>
+          <button class="btn btn-danger" onclick="stopCamera()">Stop</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="card" style="padding:24px;margin-bottom:16px">
+          <div class="card-title" style="margin-bottom:16px">Last Capture Result</div>
+          <div id="captureResult" style="color:var(--muted);font-size:13px">No capture yet. Start the camera and run the live face check.</div>
+        </div>
+        <div class="card" style="padding:24px">
+          <div class="card-title" style="margin-bottom:12px">How it works</div>
+          <div style="font-size:12px;color:var(--muted);line-height:2">
+            <span style="color:var(--accent)">1.</span> Hold still inside the green box, then turn your head slightly<br>
+            <span style="color:var(--accent)">2.</span> The browser sends a short live-check sequence to <code style="font-family:var(--mono);font-size:10px;background:var(--surface);padding:2px 6px;border-radius:4px">/api/attendance/mark</code><br>
+            <span style="color:var(--accent)">3.</span> The backend rejects static photos and only accepts live face movement<br>
+            <span style="color:var(--accent)">4.</span> A matched live face is marked present in RDS MySQL / SQLite<br>
+            <span style="color:var(--accent)">5.</span> Email + WhatsApp alert is sent
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  if (window.location.hostname === '0.0.0.0') {
+    const localhostUrl = new URL(window.location.href);
+    localhostUrl.hostname = 'localhost';
+    window.location.replace(localhostUrl.toString());
+  }
+
+  const API = window.location.protocol === 'file:'
+    ? 'http://localhost:5000'
+    : window.location.origin;
+
+  // ===== NAVIGATION =====
+  function showPage(name) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(n => {
+      if (n.textContent.toLowerCase().includes(name) ||
+          (name === 'dashboard' && n.textContent.includes('Dashboard'))) n.classList.add('active');
+    });
+
+    if (name === 'dashboard') refreshDashboard();
+    if (name === 'attendance') loadAttendance();
+    if (name === 'users') loadUsers();
+    if (name === 'unknown') loadUnknown();
+  }
+
+  // ===== TOAST =====
+  function toast(msg, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    const key = `${type}:${msg}`;
+    if ([...container.children].some(t => t.dataset.toastKey === key)) return;
+
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.textContent = msg;
+    t.dataset.toastKey = key;
+    container.appendChild(t);
+    setTimeout(() => t.remove(), 4000);
+  }
+
+  // ===== DASHBOARD =====
+  async function refreshDashboard() {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const [att, users, unknown] = await Promise.all([
+        fetch(`${API}/api/attendance/?date=${today}`).then(r => r.json()),
+        fetch(`${API}/api/users/`).then(r => r.json()),
+        fetch(`${API}/api/unknown-faces/`).then(r => r.json())
+      ]);
+
+      document.getElementById('stat-present').textContent = att.length;
+      document.getElementById('stat-users').textContent = users.length;
+      const avgConf = att.length ? (att.reduce((s,a)=>s+(a.confidence||0),0)/att.length).toFixed(1)+'%' : '—';
+      document.getElementById('stat-confidence').textContent = avgConf;
+      document.getElementById('stat-unknown').textContent = unknown.length;
+
+      renderAttendanceTable('dashboardTable', att);
+    } catch(e) {
+      document.getElementById('dashboardTable').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Cannot connect to API. Is the backend running?</div></div>';
+    }
+  }
+
+  // ===== ATTENDANCE TABLE =====
+  function renderAttendanceTable(containerId, rows) {
+    const el = document.getElementById(containerId);
+    if (!rows.length) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">No attendance records found</div></div>';
+      return;
+    }
+    el.innerHTML = `<table>
+      <thead><tr>
+        <th>Name</th><th>Roll No</th><th>Date</th><th>Time</th><th>Status</th><th>Confidence</th>
+      </tr></thead>
+      <tbody>
+        ${rows.map(r => `<tr>
+          <td><div class="user-cell"><div class="avatar">${r.name[0]}</div>${r.name}</div></td>
+          <td style="font-family:var(--mono);font-size:11px">${r.roll_no}</td>
+          <td>${r.date}</td>
+          <td style="font-family:var(--mono);font-size:12px">${r.time||''}</td>
+          <td><span class="badge present">● Present</span></td>
+          <td>
+            ${r.confidence ? r.confidence.toFixed(1)+'%' : '—'}
+            ${r.confidence ? `<div class="confidence-bar"><div class="confidence-fill" style="width:${r.confidence}%"></div></div>` : ''}
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+  }
+
+  async function loadAttendance() {
+    const date = document.getElementById('filterDate')?.value;
+    const url = date ? `${API}/api/attendance/?date=${date}` : `${API}/api/attendance/`;
+    try {
+      const rows = await fetch(url).then(r => r.json());
+      renderAttendanceTable('attendanceTable', rows);
+    } catch(e) {
+      document.getElementById('attendanceTable').innerHTML = '<div class="empty-state">API Error</div>';
+    }
+  }
+
+  function clearFilter() {
+    document.getElementById('filterDate').value = '';
+    loadAttendance();
+  }
+
+  async function exportCSV() {
+    window.open(`${API}/api/attendance/export-csv`, '_blank');
+  }
+
+  // ===== USERS TABLE =====
+  async function loadUsers() {
+    try {
+      const users = await fetch(`${API}/api/users/`).then(r => r.json());
+      const el = document.getElementById('usersTable');
+      if (!users.length) {
+        el.innerHTML = '<div class="empty-state"><div class="empty-icon">👤</div><div class="empty-text">No users registered yet</div></div>';
+        return;
+      }
+      el.innerHTML = `<table>
+        <thead><tr><th>Name</th><th>Roll No</th><th>Email</th><th>Phone</th><th>Registered</th></tr></thead>
+        <tbody>
+          ${users.map(u => `<tr>
+            <td><div class="user-cell"><div class="avatar">${u.name[0]}</div>${u.name}</div></td>
+            <td style="font-family:var(--mono);font-size:11px">${u.roll_no}</td>
+            <td style="font-size:12px">${u.email}</td>
+            <td style="font-family:var(--mono);font-size:11px">${u.phone}</td>
+            <td style="font-size:12px;color:var(--muted)">${new Date(u.created_at).toLocaleDateString()}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+    } catch(e) {
+      document.getElementById('usersTable').innerHTML = '<div class="empty-state">API Error</div>';
+    }
+  }
+
+  // ===== UNKNOWN FACES =====
+  async function loadUnknown() {
+    try {
+      const rows = await fetch(`${API}/api/unknown-faces/`).then(r => r.json());
+      const el = document.getElementById('unknownGrid');
+      if (!rows.length) {
+        el.innerHTML = '<div class="empty-state"><div class="empty-icon">🎉</div><div class="empty-text">No unknown faces — all clear!</div></div>';
+        return;
+      }
+      el.innerHTML = `<div class="section-grid">
+        ${rows.map(r => `<div class="unknown-face-card">
+          <div style="height:180px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:40px;opacity:0.3">👤</div>
+          <div class="unknown-face-meta">
+            <div>Captured: ${new Date(r.captured_at).toLocaleString()}</div>
+            <div style="margin-top:4px;word-break:break-all;opacity:0.6">${r.image_url?.split('/').pop()}</div>
+          </div>
+        </div>`).join('')}
+      </div>`;
+    } catch(e) {
+      document.getElementById('unknownGrid').innerHTML = '<div class="empty-state">API Error</div>';
+    }
+  }
+
+  // ===== REGISTER USER =====
+  function previewImage(input) {
+    if (!input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      document.getElementById('imagePreview').innerHTML =
+        `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:12px;max-height:300px" />`;
+    };
+    reader.readAsDataURL(input.files[0]);
+    document.getElementById('uploadZone').querySelector('.upload-icon').textContent = '✅';
+    document.getElementById('uploadZone').querySelector('.upload-text').textContent = input.files[0].name;
+  }
+
+  async function registerUser() {
+    const name = document.getElementById('reg-name').value.trim();
+    const roll = document.getElementById('reg-roll').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
+    const phone = document.getElementById('reg-phone').value.trim();
+    const image = document.getElementById('reg-image').files[0];
+
+    if (!name || !roll || !email || !phone || !image) {
+      toast('All fields including face photo are required', 'error'); return;
+    }
+
+    const btn = document.getElementById('regBtn');
+    btn.innerHTML = '<span class="loading-spinner"></span> Registering...';
+    btn.disabled = true;
+
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('roll_no', roll);
+    formData.append('email', email);
+    formData.append('phone', phone);
+    formData.append('image', image);
+
+    try {
+      const res = await fetch(`${API}/api/users/register`, { method: 'POST', body: formData });
+      const data = await res.json();
+      if (res.ok) {
+        toast(`✅ ${name} registered successfully!`);
+        ['reg-name','reg-roll','reg-email','reg-phone'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('reg-image').value = '';
+        document.getElementById('imagePreview').innerHTML = '<div style="text-align:center;color:var(--muted)"><div style="font-size:48px;opacity:0.3">🖼️</div><div style="font-size:12px;margin-top:8px">Image preview</div></div>';
+      } else {
+        toast(data.error || 'Registration failed', 'error');
+      }
+    } catch(e) {
+      toast('Cannot connect to API', 'error');
+    } finally {
+      btn.innerHTML = 'Register User';
+      btn.disabled = false;
+    }
+  }
+
+  // ===== CAMERA =====
+  let stream = null;
+  let isStartingCamera = false;
+  let isMarkingAttendance = false;
+  const frontCameraConstraints = {
+    video: {
+      facingMode: { ideal: 'user' },
+      width: { ideal: 1280 },
+      height: { ideal: 720 }
+    }
+  };
+  const fallbackCameraConstraints = {
+    video: {
+      width: { ideal: 1280 },
+      height: { ideal: 720 }
+    }
+  };
+  const LIVENESS_BASELINE_DELAY_MS = 650;
+  const LIVENESS_TURN_DELAY_MS = 450;
+  const LIVENESS_BURST_FRAME_COUNT = 6;
+  const LIVENESS_BURST_INTERVAL_MS = 180;
+
+  function setCameraIdleState(message = 'Click Start Camera to begin') {
+    document.getElementById('cameraOverlay').innerHTML = `
+      <div style="text-align:center;color:var(--muted)">
+        <div style="font-size:32px;margin-bottom:8px">📷</div>
+        <div style="font-size:12px">${message}</div>
+      </div>`;
+  }
+
+  function setCameraPreviewMirrored(enabled) {
+    document.getElementById('cameraFeed').classList.toggle('mirrored', enabled);
+  }
+
+  function shouldMirrorPreview(activeStream) {
+    const track = activeStream?.getVideoTracks?.()[0];
+    const facingMode = track?.getSettings?.().facingMode;
+    return !facingMode || facingMode === 'user';
+  }
+
+  async function getPreferredCameraStream() {
+    try {
+      return await requestCameraStream(frontCameraConstraints);
+    } catch (error) {
+      if (!['OverconstrainedError', 'NotFoundError', 'DevicesNotFoundError'].includes(error.name)) {
+        throw error;
+      }
+
+      return requestCameraStream(fallbackCameraConstraints);
+    }
+  }
+
+  function renderCameraActiveState(message = 'Center your face inside the box') {
+    document.getElementById('cameraOverlay').innerHTML = `
+      <div class="camera-guide">
+        <div class="face-box"><div class="scan-line"></div></div>
+        <div class="camera-guide-text">${message}</div>
+      </div>`;
+  }
+
+  function syncCameraButtons() {
+    const hasStream = Boolean(stream);
+    const startBtn = document.getElementById('startCamBtn');
+    const captureBtn = document.getElementById('capturBtn');
+
+    startBtn.disabled = isStartingCamera || hasStream;
+    startBtn.textContent = isStartingCamera ? 'Starting...' : (hasStream ? 'Camera Running' : 'Start Camera');
+    captureBtn.disabled = !hasStream || isMarkingAttendance;
+    captureBtn.textContent = isMarkingAttendance ? 'Verifying Live Face...' : 'Verify & Mark Attendance';
+  }
+
+  function getCameraSupportHint() {
+    if (!window.isSecureContext) {
+      if (window.location.protocol === 'http:' && !['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+        return 'Open the dashboard on http://localhost:5000/ or use HTTPS so the browser can access the camera.';
+      }
+
+      return 'This page is not running in a secure browser context.';
+    }
+
+    return 'This browser does not expose the camera API on this page.';
+  }
+
+  function requestCameraStream(constraints) {
+    if (navigator.mediaDevices?.getUserMedia) {
+      return navigator.mediaDevices.getUserMedia(constraints);
+    }
+
+    const legacyGetUserMedia =
+      navigator.getUserMedia ||
+      navigator.webkitGetUserMedia ||
+      navigator.mozGetUserMedia ||
+      navigator.msGetUserMedia;
+
+    if (legacyGetUserMedia) {
+      return new Promise((resolve, reject) => {
+        legacyGetUserMedia.call(navigator, constraints, resolve, reject);
+      });
+    }
+
+    return Promise.reject(new Error(getCameraSupportHint()));
+  }
+
+  function formatCameraError(error) {
+    if (!error) return 'Camera access failed for an unknown reason.';
+
+    if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+      return 'Camera permission was denied. Allow camera access in your browser and try again.';
+    }
+
+    if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+      return 'No camera was found on this device.';
+    }
+
+    if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+      return 'The camera is already in use by another application.';
+    }
+
+    if (error.name === 'OverconstrainedError') {
+      return 'The requested camera settings are not supported on this device.';
+    }
+
+    return error.message || 'Camera access failed.';
+  }
+
+  async function startCamera() {
+    if (stream) {
+      toast('Camera is already running', 'info');
+      return;
+    }
+
+    if (isStartingCamera) return;
+    isStartingCamera = true;
+    syncCameraButtons();
+
+    try {
+      stream = await getPreferredCameraStream();
+      const video = document.getElementById('cameraFeed');
+      video.srcObject = stream;
+      setCameraPreviewMirrored(shouldMirrorPreview(stream));
+      await video.play().catch(() => {});
+      renderCameraActiveState('Center your face, then follow the live check prompt');
+      toast('Camera started', 'info');
+    } catch(e) {
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
+      }
+      document.getElementById('cameraFeed').srcObject = null;
+      setCameraPreviewMirrored(false);
+      const message = formatCameraError(e);
+      setCameraIdleState(message);
+      toast(message, 'error');
+      if (!window.isSecureContext) {
+        toast('Use http://localhost:5000/ or HTTPS for camera access.', 'info');
+      }
+    }
+
+    isStartingCamera = false;
+    syncCameraButtons();
+  }
+
+  function stopCamera() {
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+    document.getElementById('cameraFeed').srcObject = null;
+    setCameraPreviewMirrored(false);
+    isMarkingAttendance = false;
+    isStartingCamera = false;
+    syncCameraButtons();
+    return setCameraIdleState('Click Start Camera');
+    document.getElementById('cameraOverlay').innerHTML = `<div style="text-align:center;color:var(--muted)"><div style="font-size:32px;margin-bottom:8px">📷</div><div style="font-size:12px">Click Start Camera</div></div>`;
+  }
+
+  function getFocusCrop(video) {
+    const wrapper = document.getElementById('cameraWrapper');
+    const focusBox = document.querySelector('#cameraOverlay .face-box');
+    if (!wrapper || !focusBox || !video.videoWidth || !video.videoHeight) {
+      return null;
+    }
+
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const boxRect = focusBox.getBoundingClientRect();
+    const containerWidth = wrapperRect.width;
+    const containerHeight = wrapperRect.height;
+    const sourceWidth = video.videoWidth;
+    const sourceHeight = video.videoHeight;
+    const sourceAspect = sourceWidth / sourceHeight;
+    const containerAspect = containerWidth / containerHeight;
+
+    let scale;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    if (sourceAspect > containerAspect) {
+      scale = containerHeight / sourceHeight;
+      offsetX = (sourceWidth * scale - containerWidth) / 2;
+    } else {
+      scale = containerWidth / sourceWidth;
+      offsetY = (sourceHeight * scale - containerHeight) / 2;
+    }
+
+    const left = boxRect.left - wrapperRect.left;
+    const top = boxRect.top - wrapperRect.top;
+    const width = boxRect.width;
+    const height = boxRect.height;
+
+    const sx = Math.max(0, Math.round((left + offsetX) / scale));
+    const sy = Math.max(0, Math.round((top + offsetY) / scale));
+    const sw = Math.min(sourceWidth - sx, Math.round(width / scale));
+    const sh = Math.min(sourceHeight - sy, Math.round(height / scale));
+
+    if (sw <= 0 || sh <= 0) return null;
+    return { sx, sy, sw, sh };
+  }
+
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  function captureFocusCropBlob(video, canvas) {
+    const crop = getFocusCrop(video);
+    if (!crop) return Promise.resolve(null);
+
+    canvas.width = crop.sw;
+    canvas.height = crop.sh;
+    canvas.getContext('2d').drawImage(
+      video,
+      crop.sx, crop.sy, crop.sw, crop.sh,
+      0, 0, crop.sw, crop.sh
+    );
+
+    return new Promise(resolve => {
+      canvas.toBlob(resolve, 'image/jpeg', 0.92);
+    });
+  }
+
+  async function captureLivenessSequence(video, canvas) {
+    renderCameraActiveState('Hold still and look straight');
+    await sleep(LIVENESS_BASELINE_DELAY_MS);
+    const baselineBlob = await captureFocusCropBlob(video, canvas);
+    if (!baselineBlob) {
+      throw new Error('Camera is not ready yet');
+    }
+
+    renderCameraActiveState('Turn your head slightly to the left or right');
+    await sleep(LIVENESS_TURN_DELAY_MS);
+
+    const challengeBlobs = [];
+    for (let i = 0; i < LIVENESS_BURST_FRAME_COUNT; i += 1) {
+      const blob = await captureFocusCropBlob(video, canvas);
+      if (blob) {
+        challengeBlobs.push(blob);
+      }
+      if (i < LIVENESS_BURST_FRAME_COUNT - 1) {
+        await sleep(LIVENESS_BURST_INTERVAL_MS);
+      }
+    }
+
+    renderCameraActiveState('Processing live face check...');
+    return { baselineBlob, challengeBlobs };
+  }
+
+  async function captureAndMark() {
+    const video = document.getElementById('cameraFeed');
+    const canvas = document.getElementById('cameraCanvas');
+    {
+      if (!stream || !video.srcObject) {
+        toast('Camera is not ready yet', 'error');
+        return;
+      }
+
+      if (isMarkingAttendance) return;
+
+      isMarkingAttendance = true;
+      syncCameraButtons();
+      const statusEl = document.getElementById('captureResult');
+      statusEl.innerHTML = '<span class="loading-spinner"></span> Verifying live face and matching attendance...';
+
+      try {
+        const { baselineBlob, challengeBlobs } = await captureLivenessSequence(video, canvas);
+        const formData = new FormData();
+        formData.append('image', baselineBlob, 'capture.jpg');
+        formData.append('liveness_baseline', baselineBlob, 'liveness-baseline.jpg');
+        challengeBlobs.forEach((blob, index) => {
+          formData.append('liveness_challenge', blob, `liveness-challenge-${index}.jpg`);
+        });
+
+        const res = await fetch(`${API}/api/attendance/mark`, { method: 'POST', body: formData });
+        const data = await res.json();
+
+        if (data.status === 'present') {
+          statusEl.innerHTML = `<span class="badge present" style="font-size:12px;padding:6px 14px">PRESENT MARKED</span>
+            <div style="margin-top:12px;font-size:13px">${data.message}</div>
+            <div style="margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--muted)">Confidence: ${data.confidence?.toFixed(1)}%</div>`;
+          toast('Attendance marked successfully!');
+        } else if (data.status === 'already_marked') {
+          statusEl.innerHTML = `<span class="badge already" style="font-size:12px;padding:6px 14px">ALREADY MARKED</span>
+            <div style="margin-top:12px;font-size:13px">${data.message}</div>`;
+          toast(data.message, 'info');
+        } else if (data.status === 'liveness_failed') {
+          statusEl.innerHTML = `<span class="badge already" style="font-size:12px;padding:6px 14px">LIVE CHECK FAILED</span>
+            <div style="margin-top:12px;font-size:13px">${data.message}</div>
+            <div style="margin-top:8px;font-size:12px;color:var(--muted)">Static photos on a phone or screen are rejected.</div>`;
+          toast(data.message, 'error');
+        } else {
+          statusEl.innerHTML = `<span class="badge unknown" style="font-size:12px;padding:6px 14px">UNKNOWN FACE</span>
+            <div style="margin-top:12px;font-size:13px">Face not recognized. Saved to unknown faces log.</div>`;
+          toast('Unknown face detected', 'error');
+        }
+
+        renderCameraActiveState('Live check complete. You can verify again anytime.');
+      } catch(e) {
+        const message = e?.message || 'API Error - Is the backend running?';
+        statusEl.innerHTML = `<span style="color:var(--danger)">${message}</span>`;
+        toast(message, 'error');
+        renderCameraActiveState('Center your face, then try the live check again');
+      } finally {
+        isMarkingAttendance = false;
+        syncCameraButtons();
+      }
+
+      return;
+    }
+    const crop = getFocusCrop(video);
+    if (!crop) {
+      toast('Camera is not ready yet', 'error');
+      return;
+    }
+
+    canvas.width = crop.sw;
+    canvas.height = crop.sh;
+    canvas.getContext('2d').drawImage(
+      video,
+      crop.sx, crop.sy, crop.sw, crop.sh,
+      0, 0, crop.sw, crop.sh
+    );
+
+    canvas.toBlob(async blob => {
+      const formData = new FormData();
+      formData.append('image', blob, 'capture.jpg');
+
+      const el = document.getElementById('captureResult');
+      el.innerHTML = '<span class="loading-spinner"></span> Processing...';
+
+      try {
+        const res = await fetch(`${API}/api/attendance/mark`, { method: 'POST', body: formData });
+        const data = await res.json();
+
+        if (data.status === 'present') {
+          el.innerHTML = `<span class="badge present" style="font-size:12px;padding:6px 14px">✅ PRESENT MARKED</span>
+            <div style="margin-top:12px;font-size:13px">${data.message}</div>
+            <div style="margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--muted)">Confidence: ${data.confidence?.toFixed(1)}%</div>`;
+          toast('Attendance marked successfully!');
+        } else if (data.status === 'already_marked') {
+          el.innerHTML = `<span class="badge already" style="font-size:12px;padding:6px 14px">⚠️ ALREADY MARKED</span>
+            <div style="margin-top:12px;font-size:13px">${data.message}</div>`;
+          toast(data.message, 'info');
+        } else {
+          el.innerHTML = `<span class="badge unknown" style="font-size:12px;padding:6px 14px">❌ UNKNOWN FACE</span>
+            <div style="margin-top:12px;font-size:13px">Face not recognized. Saved to unknown faces log.</div>`;
+          toast('Unknown face detected', 'error');
+        }
+      } catch(e) {
+        el.innerHTML = '<span style="color:var(--danger)">API Error — Is the backend running?</span>';
+      }
+    }, 'image/jpeg', 0.9);
+  }
+
+  // Init
+  refreshDashboard();
+  document.getElementById('filterDate').value = new Date().toISOString().split('T')[0];
+  syncCameraButtons();
+</script>
+</body>
+</html>
