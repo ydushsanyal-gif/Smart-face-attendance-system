@@ -13,6 +13,22 @@ A cloud-based attendance system using:
 - Web frontend dashboard
 - Docker and Jenkins CI/CD
 
+## Screenshots
+Dashboard Screen
+<img width="930" height="427" alt="image" src="https://github.com/user-attachments/assets/c9b2be17-0e3a-44d9-a665-b859da857644" />
+
+Attendance log screen
+<img width="930" height="442" alt="image" src="https://github.com/user-attachments/assets/aaa58837-fdb4-448e-afd2-8cdcb86b483e" />
+
+Register user screen
+<img width="930" height="441" alt="image" src="https://github.com/user-attachments/assets/892b79b0-167a-415b-9852-11e65c3f54f8" />
+
+All user screen
+<img width="930" height="442" alt="image" src="https://github.com/user-attachments/assets/9aebcd56-35a4-4169-ad30-7786a0e52476" />
+
+LIve screen verification
+<img width="930" height="451" alt="image" src="https://github.com/user-attachments/assets/f2b490b8-3b7f-4a43-baea-725e3ff7da56" />
+
 ## Features
 
 - Register users with face image
