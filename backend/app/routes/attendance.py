@@ -1,5 +1,6 @@
 import os
 from flask import Blueprint, request, jsonify, Response
+from flask_jwt_extended import jwt_required
 from datetime import datetime, date
 import csv
 import io
@@ -13,6 +14,7 @@ attendance_bp = Blueprint("attendance", __name__)
 REQUIRE_LIVENESS = os.getenv("REQUIRE_LIVENESS", "true").lower() == "true"
 
 @attendance_bp.post("/mark")
+@jwt_required()
 def mark_attendance():
     image = request.files.get("image")
     baseline_image = request.files.get("liveness_baseline")
@@ -118,6 +120,7 @@ def mark_attendance():
     }), 201
 
 @attendance_bp.get("/")
+@jwt_required()
 def get_attendance():
     selected_date = request.args.get("date")
     query = """
@@ -135,6 +138,7 @@ def get_attendance():
     return jsonify(rows)
 
 @attendance_bp.get("/export-csv")
+@jwt_required()
 def export_csv():
     rows = db_execute(
         """

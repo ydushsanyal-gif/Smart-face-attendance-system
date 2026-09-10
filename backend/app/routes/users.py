@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required
 from sqlalchemy.exc import IntegrityError
 
 from app.services.database import db_execute
@@ -8,6 +9,7 @@ from app.services.rekognition_service import index_face
 users_bp = Blueprint("users", __name__)
 
 @users_bp.post("/register")
+@jwt_required()
 def register_user():
     name = request.form.get("name")
     roll_no = request.form.get("roll_no")
@@ -50,6 +52,7 @@ def register_user():
     }), 201
 
 @users_bp.get("/")
+@jwt_required()
 def list_users():
     users = db_execute("SELECT id, name, roll_no, email, phone, image_url, created_at FROM users ORDER BY id DESC", fetchall=True)
     return jsonify(users)
